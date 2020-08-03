@@ -1,0 +1,186 @@
+<html>
+<head>
+<script>
+
+var idusuario=null;
+var id_nome=[];
+
+  window.fbAsyncInit = function() {
+    FB.init({
+      appId            : '244955016367327',
+      autoLogAppEvents : true,
+      xfbml            : true,
+      version          : 'v3.1'
+    });
+  };
+
+  (function(d, s, id){
+     var js, fjs = d.getElementsByTagName(s)[0];
+     if (d.getElementById(id)) {return;}
+     js = d.createElement(s); js.id = id;
+     js.src = "https://connect.facebook.net/pt_BR/sdk.js";
+     fjs.parentNode.insertBefore(js, fjs);
+   }(document, 'script', 'facebook-jssdk'));
+   
+   function logou(resp){
+		console.log(resp);
+		
+		if(resp.authResponse)
+		{
+			idusuario=resp.authResponse.userId;
+			id_nome[idusuario]='EU';
+			alert('Bem Vindo');
+		}else{
+			alert('erro');
+			}
+   }
+   function logar()
+   {
+		FB.login(logou, {scope:'user_friends,user_photos,user_location'});
+   }
+   
+   function logar2()
+    {
+		FB.login(function (resp){
+			alert('funciona!!');
+		});
+	
+	}
+	function respostaNome(dados)
+	{
+		var msgs = document.getElementById('msgs');
+		console.log(dados);
+		msgs.innerHTML = dados.first_name;
+		var foto = new Image();
+		foto.src = dados.picture.data.url;
+		msgs.append(foto);
+	}
+	
+	function mostrarNome()
+	{
+		FB.api('/me','get',{fields:'first_name,last_name,picture'},respostaNome);
+	}
+	
+	function respComp(dados)
+	{
+		if(dados.error_message)
+		{
+			alert('Erro: ' + dados.error_message);
+			
+		}
+		else
+		{
+			alert('postou');
+		}
+	}
+	
+	function compartilhar()
+	{
+		FB.ui({method:'feed', link:'https://www.google.com'}, respComp);
+	}
+	
+	function mostrarAmigos()
+	{
+		FB.api('me/friends','get',{fields:'name,picture'},function (dados){
+		var msgs = document.getElementById('msgs');
+		msgs.innerHTML='';
+		canvas = document.getElementById('canvas1');
+		ctx = canvas.getContext('2d');
+		ctx.fillStyle = 'pink';
+		ctx.font = '15px Arial';
+		//var foto = new Image();
+			for(i = 0; i < dados.data.length; i++)
+			{
+				var foto = new Image();
+				var img = new Image();
+				msgs.innerHTML += dados.data[i].name + "<br/>";
+				ctx.fillText(dados.data[i].name, 50, 40 + (i * 50));
+				foto.src += dados.data[i].picture.data.url;
+				img.i=i;
+				img.onload = function(){
+					console.log(this.i);
+					ctx.drawImage(this, 0, 0 + (this.i * 50));
+				};
+				img.src = dados.data[i].picture.data.url;
+				msgs.append(foto);
+				msgs.innerHTML += "<br/>";
+			}
+		});
+	}   
+	
+	function salvarScore(idUsu,score)
+	{
+		var xmlhttp = new XMLHttpRequest();
+		xmlhttp.onreadystatechange = function(){
+			if(this.readyState == 4 && this.status == 200)
+			{
+				alert(this.responseText);
+			}
+		}
+	
+	
+		var dados = "idusuario="+idUsu;
+		dados+="&score="+score;
+		xmlhttp.open("GET","insereScore.php?"+dados,true);
+		xmlhttp.setRequestHeader("Content-type","application/x-www-form-urlencoded");
+		xmlhttp.send(dados);
+	}
+	
+	function salvar()
+	{
+		var score=document.getElementById('score').value;
+		salvarScore(idusuario,score);
+	}
+	
+	function ranking(ids)
+	{
+		var xmlhttp=new XMLHttpRequest();
+		xmlhttp.onreadystatechange=function()
+		{
+			if(this.readyState==4 && this.status==200)
+			{
+				var dados=eval(this.responseText);
+				for(var i=0; i < dados.length; i++)
+				{
+					nome=id_nome[dados[i].idusuario];
+					alert('idusuario: '+dados[i].idusuario+' score: '+dados[i].score);
+				}
+			}
+		}
+		xmlhttp.open("POST","carregarRank.php",true);
+		xmlhttp.setRequestHeader("Content-type","application/x-www-form-urlencoded");
+		xmlhttp.send("ids="+ids);
+	}
+	
+	function pegarRanking()
+	{
+		FB.api('me/friends', 'get',{fields:'id,name'},
+			function(dados){
+				var ids=idusuario;
+			
+				for(var i=0; i < dados.data.length; i++)
+				{
+					ids+=','+dados.data[i].id;
+					id_nome[dados.data[i].id]=dados.data[i].name;
+					
+				}
+				ranking(ids);
+				console.log(ids);
+			});
+	}
+	
+</script>
+</head>
+
+<body>
+<canvas id='canvas1' width="300" height="300"></canvas>
+<div id='msgs'></div>
+<button onclick='mostrarNome()'>Nome</button>
+<button onclick='logar()'>Logar</button>
+<button onclick='mostrarAmigos()'>Amigos</button>
+<button onclick='compartilhar()'>Compartilhar</button>
+<br/>
+<input type='text' id='score'/><button onclick='salvar()'>Salvar Score</button>
+<button onclick='pegarRanking()'>Ranking</button>
+</body>
+</html>
